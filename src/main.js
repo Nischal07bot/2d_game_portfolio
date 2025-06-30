@@ -1,5 +1,6 @@
 import {k} from "./kaboomCtx.js"
 import {scaleFactor} from "./constant.js"
+import {displayDialog} from "./utils.js"
 k.loadSprite("spritesheet","./spritesheet.png",{
     sliceX:39,//since there are 624 and when the each frame=16*16 tile therefore 624/16 that no. of frames on the x axis we got
     sliceY:31,//every frame is 16*16 tile height of the image /16 and u get the no. of frames on the y axis
@@ -17,17 +18,16 @@ k.setBackground(k.Color.fromHex("#31104f"));
 k.scene("main",async () =>{
     const mapData=await (await fetch("./map.json")).json();
     const layers=mapData.layers;
-    const map=k.make([
+    const map=k.add([
         k.sprite("map"),
         k.pos(0),
         k.scale(scaleFactor)
     ]);
     const player=k.make([
-        k.sprite("spritesheet",{anim:"idle-down"},
-            k.area({
+        k.sprite("spritesheet",{anim:"idle-down"}),
+        k.area({
             shape:new k.Rect(k.vec2(0,3),10,10),//vector coordinate x and y on the origin and +3 from the x axis 
-          
-        })),
+        }),
         k.body(),//make the player a physical object 
         k.anchor("center"), //to make the x and y coordinate at the center
         k.pos(),
@@ -41,7 +41,7 @@ k.scene("main",async () =>{
     ]);
 
     for(const layer of layers){
-        if(layer.name==="boundaries"){
+        if(layer.name === "boundaries"){
             for(const boundary of layer.objects){
                 map.add([
                     k.area({
@@ -51,16 +51,39 @@ k.scene("main",async () =>{
                     k.pos(boundary.x,boundary.y),
                     boundary.name,
                 ]);
+
+                console.log(boundary.name);
                 if(boundary.name)
                 {
                     player.onCollide(boundary.name,()=>{
                         player.isInDialog=true;
-                        //
+                        displayDialog("TODO",()=>{
+                            player.isInDialog=false;
+                        })
                     })
                 }
 
             }
+            continue;
+        }
+        if(layer.name==="spawnpoints")
+        {
+            for(const entity of layer.objects)
+            {
+                //only one entity here but there can be many 
+                if(entity.name === "player")
+                {
+                    console.log(entity.name);
+                    player.pos=k.vec2((map.pos.x+entity.x)*scaleFactor,
+                    (map.pos.y+entity.y)*scaleFactor);
+                    k.add(player);
+                }
+            }
         }
     }
+    k.onUpdate(()=>{
+        k.camPos(player.pos.x,player.pos.y+100);
+        
+    })
 })
 k.go("main");
